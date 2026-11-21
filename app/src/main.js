@@ -1,17 +1,22 @@
-// Neon Coast — the editor wiring.
+// Neon Coast — the editor wiring, second pass.
 //
 // Pick photos (your own files, or the bundled samples), crop and position
 // each one, choose a panel layout, a colour grade and caption lettering,
-// then export a PNG in a post size. A `?shot=` query instead sets up one
-// fixed scene for a screenshot; see shots.js for the query it reads.
-import { drawCover, SIZES, LAYOUTS, GRADES, TITLE_STYLES } from './cover.js';
+// place the caption where you want it, then export a PNG in a post size.
+// A `?shot=` query instead sets up one fixed scene for a screenshot;
+// see shots.js for the query it reads.
+import { drawCover, SIZES, LAYOUTS, GRADES, TITLE_STYLES, CAPTION_POSITIONS, CAPTION_FONTS } from './cover.js';
 import { runShot } from './shots.js';
 
 const canvas = document.getElementById('cover');
 const titleField = document.getElementById('title');
 const subtitleField = document.getElementById('subtitle');
+const kickerField = document.getElementById('kicker');
+const captionSizeField = document.getElementById('caption-size');
+const captionSizeValue = document.getElementById('caption-size-value');
 const sizeField = document.getElementById('size');
 const sunField = document.getElementById('sun');
+const shadeField = document.getElementById('caption-shade');
 const statusLine = document.getElementById('status');
 const exportButton = document.getElementById('export');
 
@@ -19,16 +24,30 @@ const exportButton = document.getElementById('export');
 // calls repaint() to redraw the live preview from it.
 const state = {
   photos: [null, null, null],
-  layout: 'trio',
-  grade: 'sunset',
-  title: 'Sunset Heist',
-  subtitle: 'Vice City Nights',
-  titleStyle: 'block',
+  layout: 'hero',
+  grade: 'midnight',
+  title: 'Midnight Run',
+  subtitle: 'Vice City After Dark',
+  kicker: 'Neon Coast presents',
+  titleStyle: 'neon',
+  captionPos: 'bottom',
+  captionFont: 'heavy',
+  captionSize: 1,
+  captionShade: true,
   zoom: [1, 1, 1],
   panX: [0, 0, 0],
   panY: [0, 0, 0],
   sun: true,
   size: 'square',
+};
+
+/** The fallback state, used when a shot scene leaves a field out. */
+const FALLBACKS = {
+  layout: 'trio',
+  grade: 'sunset',
+  captionPos: 'bottom',
+  captionFont: 'heavy',
+  captionSize: 1,
 };
 
 /** Redraws the preview canvas at the size the state currently asks for. */
@@ -53,6 +72,11 @@ export function loadImage(url) {
     img.onerror = () => reject(new Error(`could not load ${url}`));
     img.src = url;
   });
+}
+
+/** Shows the current caption-size multiplier next to its slider. */
+function showCaptionSize() {
+  captionSizeValue.textContent = `${Number(state.captionSize).toFixed(2)}x`;
 }
 
 /**
@@ -118,19 +142,65 @@ function markOptionRow(groupId, value) {
     b.classList.toggle('active', b.dataset.value === value));
 }
 
+/** Syncs every caption control in the panel with the current state. */
+function syncCaptionControls(scene) {
+  titleField.value = scene.caption;
+  subtitleField.value = scene.subtitle;
+  kickerField.value = scene.kicker ?? '';
+  captionSizeField.value = String(scene.captionSize ?? FALLBACKS.captionSize);
+  shadeField.checked = Boolean(scene.captionShade);
+  sizeField.value = scene.size;
+  sunField.checked = scene.sun;
+  markOptionRow('layout-options', scene.layout);
+  markOptionRow('grade-options', scene.grade);
+  markOptionRow('style-options', scene.style);
+  markOptionRow('caption-pos-options', scene.captionPos ?? FALLBACKS.captionPos);
+  markOptionRow('caption-font-options', scene.captionFont ?? FALLBACKS.captionFont);
+}
+
+/** Applies a shot scene to the editor state and repaints once. */
+function applyScene(scene) {
+  state.layout = scene.layout;
+  state.grade = scene.grade;
+  state.title = scene.caption;
+  state.subtitle = scene.subtitle;
+  state.kicker = scene.kicker ?? '';
+  state.titleStyle = scene.style;
+  state.captionPos = scene.captionPos ?? FALLBACKS.captionPos;
+  state.captionFont = scene.captionFont ?? FALLBACKS.captionFont;
+  state.captionSize = scene.captionSize ?? FALLBACKS.captionSize;
+  state.captionShade = Boolean(scene.captionShade);
+  state.sun = scene.sun;
+  state.size = scene.size;
+  if (Array.isArray(scene.zoom)) state.zoom = scene.zoom.slice();
+  if (Array.isArray(scene.panX)) state.panX = scene.panX.slice();
+  if (Array.isArray(scene.panY)) state.panY = scene.panY.slice();
+  syncCaptionControls(scene);
+  showCaptionSize();
+}
+
 [0, 1, 2].forEach(wirePhotoSlot);
 wireOptionRow('layout-options', 'layout');
 wireOptionRow('grade-options', 'grade');
 wireOptionRow('style-options', 'titleStyle');
+wireOptionRow('caption-pos-options', 'captionPos');
+wireOptionRow('caption-font-options', 'captionFont');
 
 titleField.addEventListener('input', () => { state.title = titleField.value; repaint(); });
 subtitleField.addEventListener('input', () => { state.subtitle = subtitleField.value; repaint(); });
+kickerField.addEventListener('input', () => { state.kicker = kickerField.value; repaint(); });
+captionSizeField.addEventListener('input', () => {
+  state.captionSize = Number(captionSizeField.value);
+  showCaptionSize();
+  repaint();
+});
 sizeField.addEventListener('change', () => {
   state.size = sizeField.value;
   repaint();
   setStatus(`Preview is now ${SIZES[state.size].label}.`);
 });
 sunField.addEventListener('change', () => { state.sun = sunField.checked; repaint(); });
+shadeField.addEventListener('change', () => { state.captionShade = shadeField.checked; repaint(); });
 
 exportButton.addEventListener('click', () => {
   const size = SIZES[state.size];
@@ -156,24 +226,21 @@ const query = new URLSearchParams(location.search);
 if (query.get('shot')) {
   // Screenshot mode: apply one fixed scene, then flag readiness.
   runShot(query.get('shot'), query, async (scene) => {
-    state.layout = scene.layout;
-    state.grade = scene.grade;
-    state.title = scene.caption;
-    state.subtitle = scene.subtitle;
-    state.titleStyle = scene.style;
-    state.sun = scene.sun;
-    state.size = scene.size;
-    titleField.value = scene.caption;
-    subtitleField.value = scene.subtitle;
-    sizeField.value = scene.size;
-    sunField.checked = scene.sun;
-    markOptionRow('layout-options', scene.layout);
-    markOptionRow('grade-options', scene.grade);
-    markOptionRow('style-options', scene.style);
+    applyScene(scene);
     const names = [scene.photoA, scene.photoB, scene.photoC];
     state.photos = await Promise.all(names.map((name) => loadImage(`samples/${name}.jpg`)));
     names.forEach((name, slot) => {
       document.querySelector(`[data-slot="${slot}"] select`).value = name;
+    });
+    // Mirror the scene's crop numbers back onto the sliders so the
+    // editor screenshot shows the same crop the cover uses.
+    (scene.zoom || []).forEach((value, slot) => {
+      const input = document.querySelector(`[data-slot="${slot}"] input[data-crop="zoom"]`);
+      if (input) input.value = String(value);
+    });
+    (scene.panX || []).forEach((value, slot) => {
+      const input = document.querySelector(`[data-slot="${slot}"] input[data-crop="panx"]`);
+      if (input) input.value = String(value);
     });
     repaint();
   });
@@ -188,5 +255,6 @@ if (query.get('shot')) {
       repaint();
     })
     .catch(() => repaint());
+  showCaptionSize();
   repaint();
 }

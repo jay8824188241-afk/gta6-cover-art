@@ -1,17 +1,22 @@
-// Neon Coast — the cover painter.
+// Neon Coast — the cover painter, second pass.
 //
-// Everything on the poster is drawn here with plain canvas calls: the
-// photo panels, the sunset / neon / noir colour wash, a striped synthwave
-// sun and the big caption lettering. No game artwork, logo or font is
-// involved anywhere; the lettering is a system heavyweight face filled
-// with gradients the app builds itself.
+// Every mark on the poster is painted here with plain canvas calls: the
+// photo panels, the colour wash for the chosen grade, a striped synthwave
+// sun, and the big caption lettering. Nothing here is game artwork, a
+// game logo, or a game font; the lettering is a system heavyweight face
+// filled with gradients this file builds on the fly.
 //
-// A cover is described by a state object:
-//   photos:    three HTMLImageElement values (or null) — one per slot
-//   layout:    'solo' | 'duo' | 'trio' | 'quad'
-//   grade:     'sunset' | 'neon' | 'noir'
-//   title:     the big caption line, subtitle: the small line under it
+// A cover is described by one plain state object:
+//   photos:    three image elements (or null), one per photo slot
+//   layout:    'solo' | 'duo' | 'trio' | 'quad' | 'hero'
+//   grade:     'sunset' | 'neon' | 'noir' | 'midnight' | 'golden'
+//   title:     the big caption line; subtitle: the small line under it
 //   titleStyle:'block' | 'sunset' | 'neon'
+//   captionPos:'bottom' | 'top' | 'floating' — where the caption band sits
+//   captionFont:'heavy' | 'condensed' | 'outline' — the caption face
+//   captionSize: a multiplier around 1 (0.7–1.4) for the title size
+//   kicker:     a short eyebrow line set in small caps above the title
+//   captionShade: whether the title gets a soft drop shadow for legibility
 //   zoom, panX, panY: per-slot crop numbers (zoom >= 0.5, pans in [-1, 1])
 //   sun:       whether the striped sun is drawn
 //   size:      one of the keys of SIZES
@@ -31,12 +36,15 @@ export const LAYOUTS = {
   duo: { label: 'Two panels', panels: 2 },
   trio: { label: 'Three panels', panels: 3 },
   quad: { label: 'Four panels', panels: 4 },
+  hero: { label: 'Hero + two stacked', panels: 3 },
 };
 
 export const GRADES = {
   sunset: { label: 'Vice sunset' },
   neon: { label: 'Neon nights' },
   noir: { label: 'Noir' },
+  midnight: { label: 'Midnight neon' },
+  golden: { label: 'Golden hour' },
 };
 
 export const TITLE_STYLES = {
@@ -45,8 +53,38 @@ export const TITLE_STYLES = {
   neon: { label: 'Neon glow' },
 };
 
+export const CAPTION_POSITIONS = {
+  bottom: { label: 'Bottom band' },
+  top: { label: 'Top band' },
+  floating: { label: 'Floating over photo' },
+};
+
+export const CAPTION_FONTS = {
+  heavy: { label: 'Heavy block' },
+  condensed: { label: 'Tall condensed' },
+  outline: { label: 'Outlined' },
+};
+
+/**
+ * The kicker is the eyebrow line above the title: one short phrase in
+ * wide-tracked small caps, in the grade's accent colour. It is optional —
+ * an empty kicker simply leaves the title where it was.
+ */
+export function hasKicker(state) {
+  return Boolean((state.kicker || '').trim());
+}
+
+/** Pixel height reserved for the kicker inside the caption band. */
+function kickerReserve(h, state) {
+  return hasKicker(state) ? Math.max(14, h * 0.028) : 0;
+}
+
 // The gap between panels, as a share of the cover's shorter side.
 const PANEL_GAP = 0.007;
+
+// How far the floating caption sits from the poster's vertical centre,
+// as a share of the height; 0 would be dead centre.
+const FLOAT_OFFSET = 0.08;
 
 /** Where each panel sits on a w-by-h cover, in layout order. */
 export function panelRects(layout, w, h) {
@@ -69,6 +107,19 @@ export function panelRects(layout, w, h) {
       { x: halfW + gap, y: halfH + gap, w: halfW, h: halfH },
     ];
   }
+  if (layout === 'hero') {
+    // Hero: one tall panel takes the left ~62% of the cover, and the
+    // other two stack on the right, so a single strong shot leads while
+    // two supporting shots fill the rest of the frame.
+    const heroW = Math.round((w - gap) * 0.62);
+    const sideW = w - heroW - gap;
+    const sideH = (h - gap) / 2;
+    return [
+      { x: 0, y: 0, w: heroW, h },
+      { x: heroW + gap, y: 0, w: sideW, h: sideH },
+      { x: heroW + gap, y: sideH + gap, w: sideW, h: sideH },
+    ];
+  }
   // trio: three equal vertical strips.
   const third = (w - gap * 2) / 3;
   return [
@@ -83,6 +134,7 @@ export function panelSlots(layout) {
   if (layout === 'solo') return [0];
   if (layout === 'duo') return [0, 1];
   if (layout === 'quad') return [0, 1, 2, 0];
+  if (layout === 'hero') return [0, 1, 2];
   return [0, 1, 2];
 }
 
@@ -116,7 +168,16 @@ function paintEmptyPanel(ctx, rect) {
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 }
 
-/** Tints the whole poster with the chosen grade, then darkens the corners. */
+/**
+ * The colour wash for one grade, painted over the whole poster, plus a
+ * soft darkening of the corners so the caption stays readable.
+ *
+ * Midnight neon is the new night grade: deep indigo at the top fading
+ * into electric violet, with a cold cyan lift in the middle — a darker,
+ * bluer night than the old neon grade, which stays pink-led. Golden hour
+ * is the new warm grade: honey amber at the top, soft rose in the middle
+ * and a warm ember base, brighter and dustier than the sunset grade.
+ */
 function paintGrade(ctx, grade, w, h) {
   const wash = ctx.createLinearGradient(0, 0, 0, h);
   if (grade === 'neon') {
@@ -126,6 +187,16 @@ function paintGrade(ctx, grade, w, h) {
   } else if (grade === 'noir') {
     wash.addColorStop(0, 'rgba(24, 34, 68, 0.18)');
     wash.addColorStop(1, 'rgba(0, 0, 0, 0.44)');
+  } else if (grade === 'midnight') {
+    wash.addColorStop(0, 'rgba(10, 12, 60, 0.34)');
+    wash.addColorStop(0.38, 'rgba(38, 16, 96, 0.22)');
+    wash.addColorStop(0.62, 'rgba(0, 190, 220, 0.08)');
+    wash.addColorStop(1, 'rgba(88, 0, 180, 0.30)');
+  } else if (grade === 'golden') {
+    wash.addColorStop(0, 'rgba(255, 196, 90, 0.16)');
+    wash.addColorStop(0.45, 'rgba(255, 150, 110, 0.10)');
+    wash.addColorStop(0.8, 'rgba(214, 110, 60, 0.14)');
+    wash.addColorStop(1, 'rgba(120, 48, 20, 0.26)');
   } else {
     wash.addColorStop(0, 'rgba(255, 170, 60, 0.09)');
     wash.addColorStop(0.55, 'rgba(255, 90, 120, 0.11)');
@@ -141,6 +212,24 @@ function paintGrade(ctx, grade, w, h) {
   edge.addColorStop(1, 'rgba(0, 0, 0, 0.30)');
   ctx.fillStyle = edge;
   ctx.fillRect(0, 0, w, h);
+}
+
+/** The accent colour for a grade: used for the caption rule and subtitle. */
+export function gradeAccent(grade) {
+  if (grade === 'neon') return '#00e5ff';
+  if (grade === 'midnight') return '#7dd7ff';
+  if (grade === 'golden') return '#ffc95e';
+  if (grade === 'noir') return '#c9d4ff';
+  return '#ff9a3d';
+}
+
+/** The subtitle colour for a grade, a softer echo of its accent. */
+export function gradeSubtitle(grade) {
+  if (grade === 'neon') return '#8ef4ff';
+  if (grade === 'midnight') return '#bfe9ff';
+  if (grade === 'golden') return '#ffe3ae';
+  if (grade === 'noir') return '#dfe6ff';
+  return '#ffd9a0';
 }
 
 /**
@@ -175,18 +264,34 @@ function paintSun(ctx, cx, cy, r) {
   ctx.restore();
 }
 
-function titleFont(px) {
+/**
+ * The font string for the title at a given pixel size, for the chosen
+ * caption face. Heavy is the wide black face; condensed squeezes the
+ * letters tall and tight; outline uses the same heavy face but is drawn
+ * stroked-only by the caption painter.
+ */
+function titleFont(px, face) {
+  if (face === 'condensed') {
+    return `900 ${px}px "Arial Narrow", "Helvetica Neue Condensed", Arial, sans-serif`;
+  }
   return `900 ${px}px "Arial Black", "Helvetica Neue", Arial, sans-serif`;
 }
 
+/** The letter-spacing for a caption face, as a share of the title size. */
+function faceTracking(face, px) {
+  if (face === 'condensed') return Math.round(px * 0.06);
+  if (face === 'outline') return Math.round(px * 0.03);
+  return Math.round(px * 0.02);
+}
+
 /** Breaks a title into at most two lines that fit inside maxWidth. */
-function wrapTitle(ctx, text, px, maxWidth) {
+function wrapTitle(ctx, text, px, face, maxWidth) {
   const words = text.split(/\s+/).filter(Boolean);
   const lines = [];
   let current = '';
   for (const word of words) {
     const trial = current ? `${current} ${word}` : word;
-    ctx.font = titleFont(px);
+    ctx.font = titleFont(px, face);
     if (ctx.measureText(trial).width <= maxWidth || !current) {
       current = trial;
     } else {
@@ -202,33 +307,63 @@ function wrapTitle(ctx, text, px, maxWidth) {
   return lines;
 }
 
-/** The caption band across the bottom: big title, small subtitle. */
+/**
+ * Where the caption band goes, for the chosen position. Bottom and top
+ * are solid bands pinned to an edge; floating is a translucent band
+ * centred just below the poster's middle, over the photos themselves.
+ */
+function captionBand(state, w, h, hasTitle, hasSubtitle) {
+  const bandH = h * (hasTitle && hasSubtitle ? 0.22 : 0.17);
+  if (state.captionPos === 'top') return { y: 0, h: bandH, banded: true };
+  if (state.captionPos === 'floating') {
+    return { y: h * (0.5 + FLOAT_OFFSET) - bandH / 2, h: bandH, banded: false };
+  }
+  return { y: h - bandH, h: bandH, banded: true };
+}
+
+/** The caption band: big title, small subtitle, at the chosen position. */
 function paintCaption(ctx, state, w, h) {
   const title = (state.title || '').trim().toUpperCase();
   const subtitle = (state.subtitle || '').trim().toUpperCase();
   if (!title && !subtitle) return;
-  const bandH = h * (title && subtitle ? 0.22 : 0.17);
-  const bandY = h - bandH;
-  ctx.fillStyle = 'rgba(12, 6, 24, 0.74)';
+  const face = state.captionFont || 'heavy';
+  const sizeScale = Math.min(1.4, Math.max(0.7, Number(state.captionSize) || 1));
+  const band = captionBand(state, w, h, Boolean(title), Boolean(subtitle));
+  const bandY = band.y;
+  const bandH = band.h;
+  ctx.fillStyle = band.banded ? 'rgba(12, 6, 24, 0.74)' : 'rgba(12, 6, 24, 0.55)';
   ctx.fillRect(0, bandY, w, bandH);
-  ctx.fillStyle = state.grade === 'neon' ? '#00e5ff' : '#ff9a3d';
-  ctx.fillRect(0, bandY, w, Math.max(3, h * 0.005));
+  ctx.fillStyle = gradeAccent(state.grade);
+  const ruleY = state.captionPos === 'top' ? bandY + bandH : bandY;
+  ctx.fillRect(0, ruleY, w, Math.max(3, h * 0.005));
   if (!title) return;
 
   const maxWidth = w * 0.9;
-  let px = h * 0.085;
+  let px = h * 0.085 * sizeScale;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  let lines = wrapTitle(ctx, title, px, maxWidth);
+  // Kicker first: it sits at the top of the band and pushes the title
+  // block down by the space it reserves, so nothing overlaps.
+  const reserve = kickerReserve(h, state);
+  if (hasKicker(state)) {
+    const kickPx = Math.max(11, h * 0.02);
+    ctx.font = `800 ${kickPx}px "Helvetica Neue", Arial, sans-serif`;
+    try { ctx.letterSpacing = `${Math.round(kickPx * 0.45)}px`; } catch { /* canvas without letterSpacing */ }
+    ctx.fillStyle = gradeAccent(state.grade);
+    ctx.fillText((state.kicker || '').trim().toUpperCase(), w / 2, bandY + reserve * 0.55);
+    try { ctx.letterSpacing = '0px'; } catch { /* canvas without letterSpacing */ }
+  }
+  let lines = wrapTitle(ctx, title, px, face, maxWidth);
   while (px > h * 0.03 && lines.some((line) => ctx.measureText(line).width > maxWidth)) {
     px *= 0.94;
-    ctx.font = titleFont(px);
-    lines = wrapTitle(ctx, title, px, maxWidth);
+    ctx.font = titleFont(px, face);
+    lines = wrapTitle(ctx, title, px, face, maxWidth);
   }
-  const lineH = px * 1.05;
-  const top = bandY + ((bandH - lineH * lines.length) / 2) - (subtitle ? px * 0.28 : 0);
-  ctx.font = titleFont(px);
-  try { ctx.letterSpacing = `${Math.round(px * 0.02)}px`; } catch { /* canvas without letterSpacing */ }
+  const lineH = px * (face === 'condensed' ? 0.98 : 1.05);
+  const top = bandY + reserve + ((bandH - reserve - lineH * lines.length) / 2) - (subtitle ? px * 0.28 : 0);
+  ctx.font = titleFont(px, face);
+  const tracking = faceTracking(face, px);
+  try { ctx.letterSpacing = `${tracking}px`; } catch { /* canvas without letterSpacing */ }
   lines.forEach((line, i) => {
     const y = top + lineH * (i + 0.5);
     if (state.titleStyle === 'sunset') {
@@ -245,23 +380,43 @@ function paintCaption(ctx, state, w, h) {
       ctx.fillStyle = '#ffffff';
     }
     ctx.lineJoin = 'round';
+    // Optional drop shade: a soft dark blur behind each title line so
+    // the letters stay readable over a bright photo, even in the
+    // floating position where there is no solid band behind them.
+    if (state.captionShade && state.titleStyle !== 'neon') {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = px * 0.18;
+      ctx.shadowOffsetY = px * 0.05;
+    }
     ctx.strokeStyle = 'rgba(10, 4, 20, 0.85)';
     ctx.lineWidth = Math.max(2, px * 0.07);
-    ctx.strokeText(line, w / 2, y);
-    ctx.fillText(line, w / 2, y);
-    if (state.titleStyle === 'neon') {
+    if (face === 'outline') {
+      // Outlined face: a thick dark edge, then the letter shape itself
+      // is left hollow so the photo shows through the letters.
+      ctx.lineWidth = Math.max(3, px * 0.09);
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeText(line, w / 2, y);
+      ctx.lineWidth = Math.max(2, px * 0.05);
+      ctx.strokeStyle = 'rgba(10, 4, 20, 0.9)';
+      ctx.strokeText(line, w / 2, y);
+    } else {
+      ctx.strokeText(line, w / 2, y);
+      ctx.fillText(line, w / 2, y);
+    }
+    if (state.titleStyle === 'neon' && face !== 'outline') {
       ctx.shadowColor = '#00e5ff';
       ctx.shadowBlur = px * 0.16;
       ctx.fillText(line, w / 2, y);
     }
     ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
   });
   try { ctx.letterSpacing = '0px'; } catch { /* canvas without letterSpacing */ }
   if (subtitle) {
     const subPx = Math.max(12, h * 0.022);
     ctx.font = `700 ${subPx}px "Helvetica Neue", Arial, sans-serif`;
     try { ctx.letterSpacing = `${Math.round(subPx * 0.32)}px`; } catch { /* canvas without letterSpacing */ }
-    ctx.fillStyle = state.grade === 'neon' ? '#8ef4ff' : '#ffd9a0';
+    ctx.fillStyle = gradeSubtitle(state.grade);
     ctx.fillText(subtitle, w / 2, bandY + bandH - subPx * 1.15);
     try { ctx.letterSpacing = '0px'; } catch { /* canvas without letterSpacing */ }
   }

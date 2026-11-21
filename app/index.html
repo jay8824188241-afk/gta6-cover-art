@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>Neon Coast — GTA-style cover art maker</title>
 <link rel="stylesheet" href="./style.css">
 </head>
@@ -17,7 +18,7 @@
     <fieldset>
       <legend>Step 1 — Photos</legend>
       <div class="photo-slot" data-slot="0">
-        <p class="slot-name">Photo A · first panel</p>
+        <p class="slot-name">Photo A · hero panel</p>
         <label>Your photo <input type="file" accept="image/*"></label>
         <label>Or try a sample
           <select>
@@ -64,34 +65,54 @@
       <legend>Step 2 — Layout &amp; grade</legend>
       <p class="group-label">Panels</p>
       <div class="options" id="layout-options">
-        <button type="button" data-value="trio" class="active">Three panels</button>
+        <button type="button" data-value="hero" class="active">Hero + two stacked</button>
+        <button type="button" data-value="trio">Three panels</button>
         <button type="button" data-value="duo">Two panels</button>
         <button type="button" data-value="solo">One photo</button>
         <button type="button" data-value="quad">Four panels</button>
       </div>
       <p class="group-label">Colour grade</p>
       <div class="options" id="grade-options">
-        <button type="button" data-value="sunset" class="active">Vice sunset</button>
+        <button type="button" data-value="midnight" class="active">Midnight neon</button>
+        <button type="button" data-value="golden">Golden hour</button>
+        <button type="button" data-value="sunset">Vice sunset</button>
         <button type="button" data-value="neon">Neon nights</button>
         <button type="button" data-value="noir">Noir</button>
       </div>
     </fieldset>
 
     <fieldset>
-      <legend>Step 2 — Caption</legend>
-      <label>Title <input id="title" type="text" maxlength="48" value="Sunset Heist"></label>
-      <label>Subtitle <input id="subtitle" type="text" maxlength="48" value="Vice City Nights"></label>
+      <legend>Step 3 — Caption</legend>
+      <label>Kicker <input id="kicker" type="text" maxlength="48" value="Neon Coast presents" placeholder="Short line above the title"></label>
+      <label>Title <input id="title" type="text" maxlength="48" value="Midnight Run"></label>
+      <label>Subtitle <input id="subtitle" type="text" maxlength="48" value="Vice City After Dark"></label>
+      <p class="group-label">Caption position</p>
+      <div class="options" id="caption-pos-options">
+        <button type="button" data-value="bottom" class="active">Bottom band</button>
+        <button type="button" data-value="top">Top band</button>
+        <button type="button" data-value="floating">Floating over photo</button>
+      </div>
+      <p class="group-label">Caption font</p>
+      <div class="options" id="caption-font-options">
+        <button type="button" data-value="heavy" class="active">Heavy block</button>
+        <button type="button" data-value="condensed">Tall condensed</button>
+        <button type="button" data-value="outline">Outlined</button>
+      </div>
       <p class="group-label">Lettering</p>
       <div class="options" id="style-options">
-        <button type="button" data-value="block" class="active">Block</button>
+        <button type="button" data-value="block">Block</button>
         <button type="button" data-value="sunset">Sunset fill</button>
-        <button type="button" data-value="neon">Neon glow</button>
+        <button type="button" data-value="neon" class="active">Neon glow</button>
       </div>
+      <label>Title size <span class="range-value" id="caption-size-value">1.00x</span>
+        <input id="caption-size" type="range" min="0.7" max="1.4" step="0.05" value="1">
+      </label>
+      <label class="check"><input id="caption-shade" type="checkbox" checked> Drop shadow behind the title</label>
       <label class="check"><input id="sun" type="checkbox" checked> Striped sunset sun</label>
     </fieldset>
 
     <fieldset>
-      <legend>Step 3 — Export</legend>
+      <legend>Step 4 — Export</legend>
       <label>Post size
         <select id="size">
           <option value="square" selected>1080 x 1080 — square post</option>

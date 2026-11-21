@@ -21,10 +21,31 @@ input[type=text], select { font: inherit; padding: 8px 10px; border: 1px solid #
 input[type=range] { accent-color: #ff2e88; width: 100%; }
 input[type=file] { font-weight: 400; }
 
+/* The caption-size readout sits on the same line as its label, so the
+   slider's current multiplier is always visible while dragging. */
+.range-value { margin-left: auto; font-weight: 700; font-size: 13px; color: #8ef4ff; }
+label:has(.range-value) { flex-direction: row; flex-wrap: wrap; align-items: center; }
+label:has(.range-value) input[type=range] { flex: 1 1 100%; }
+
+/* Kicker field hint: the placeholder already explains it, but the input
+   itself gets the accent border so it reads as part of the caption set. */
+#kicker { border-color: #6b5a8a; }
+#kicker:focus { outline: 2px solid #00e5ff; outline-offset: 1px; }
+
 button { font: inherit; font-weight: 700; padding: 9px 12px; border: 1px solid #4c3f63; border-radius: 6px; background: #2b223a; color: #f5f2fb; cursor: pointer; }
 button:hover { border-color: #ff2e88; }
 button.active { background: #ff2e88; border-color: #ff2e88; color: #fff; }
 .options { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* New grades get their own active colours so the picked grade is
+   recognisable at a glance: midnight reads cold blue-violet, golden
+   reads warm amber, and the hero layout button reads teal. */
+#grade-options button[data-value="midnight"].active { background: #4a2bbf; border-color: #7dd7ff; }
+#grade-options button[data-value="golden"].active { background: #b06a00; border-color: #ffc95e; }
+#layout-options button[data-value="hero"].active { background: #0e7d8a; border-color: #8ef4ff; }
+#caption-pos-options button.active { background: #5b3a9e; border-color: #b79bff; }
+#caption-font-options button.active { background: #33305e; border-color: #8ef4ff; }
+
 #export { background: linear-gradient(90deg, #ff7a3d, #ff2e88); border: 0; font-size: 16px; padding: 12px; }
 #status { margin: 0; min-height: 1.2em; color: #8ef4ff; font-size: 13px; }
 .fineprint { margin: 0; font-size: 12px; color: #8f86a5; }
@@ -37,3 +58,12 @@ body.shot-cover .controls { display: none; }
 body.shot-cover .app { padding: 0; gap: 0; }
 body.shot-cover .preview { position: static; }
 body.shot-cover canvas { width: 100vw; height: 100vh; max-height: none; border-radius: 0; box-shadow: none; object-fit: contain; background: #160a24; }
+
+/* Narrow screens: stack the controls above the preview instead of
+   squeezing them into a side column the phone cannot show. */
+@media (max-width: 760px) {
+  .app { flex-direction: column; align-items: stretch; padding: 16px; gap: 18px; }
+  .controls { width: auto; }
+  .preview { position: static; }
+  canvas { width: 100%; max-height: none; }
+}
