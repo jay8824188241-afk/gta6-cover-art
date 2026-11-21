@@ -3,20 +3,110 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cover Snap</title>
+<title>Neon Coast — GTA-style cover art maker</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 <main class="app">
-  <section class="controls">
-    <h1>Cover Snap</h1>
-    <p>A photo and a caption, made into a square cover.</p>
-    <label>Photo <input id="photo" type="file" accept="image/*"></label>
-    <label>Caption <input id="caption" type="text" maxlength="40" value="Sunset Heist"></label>
-    <button id="export" type="button">Export PNG 1080 x 1080</button>
-    <p id="status" role="status"></p>
+  <section class="controls" aria-label="Cover editor">
+    <header>
+      <h1>Neon Coast</h1>
+      <p class="tagline">Three steps from your photos to a poster-style cover: pick the shots, write the caption, export the PNG. Nothing is uploaded — every photo stays on your machine.</p>
+    </header>
+
+    <fieldset>
+      <legend>Step 1 — Photos</legend>
+      <div class="photo-slot" data-slot="0">
+        <p class="slot-name">Photo A · first panel</p>
+        <label>Your photo <input type="file" accept="image/*"></label>
+        <label>Or try a sample
+          <select>
+            <option value="none">No photo</option>
+            <option value="pier" selected>Pier at dusk</option>
+            <option value="boulevard">Boulevard</option>
+          </select>
+        </label>
+        <label>Zoom <input type="range" data-crop="zoom" min="0.5" max="3" step="0.05" value="1"></label>
+        <label>Slide sideways <input type="range" data-crop="panx" min="-1" max="1" step="0.05" value="0"></label>
+        <label>Slide up / down <input type="range" data-crop="pany" min="-1" max="1" step="0.05" value="0"></label>
+      </div>
+      <div class="photo-slot" data-slot="1">
+        <p class="slot-name">Photo B · second panel</p>
+        <label>Your photo <input type="file" accept="image/*"></label>
+        <label>Or try a sample
+          <select>
+            <option value="none">No photo</option>
+            <option value="pier">Pier at dusk</option>
+            <option value="boulevard" selected>Boulevard</option>
+          </select>
+        </label>
+        <label>Zoom <input type="range" data-crop="zoom" min="0.5" max="3" step="0.05" value="1"></label>
+        <label>Slide sideways <input type="range" data-crop="panx" min="-1" max="1" step="0.05" value="0"></label>
+        <label>Slide up / down <input type="range" data-crop="pany" min="-1" max="1" step="0.05" value="0"></label>
+      </div>
+      <div class="photo-slot" data-slot="2">
+        <p class="slot-name">Photo C · third panel</p>
+        <label>Your photo <input type="file" accept="image/*"></label>
+        <label>Or try a sample
+          <select>
+            <option value="none">No photo</option>
+            <option value="pier" selected>Pier at dusk</option>
+            <option value="boulevard">Boulevard</option>
+          </select>
+        </label>
+        <label>Zoom <input type="range" data-crop="zoom" min="0.5" max="3" step="0.05" value="1"></label>
+        <label>Slide sideways <input type="range" data-crop="panx" min="-1" max="1" step="0.05" value="0"></label>
+        <label>Slide up / down <input type="range" data-crop="pany" min="-1" max="1" step="0.05" value="0"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Step 2 — Layout &amp; grade</legend>
+      <p class="group-label">Panels</p>
+      <div class="options" id="layout-options">
+        <button type="button" data-value="trio" class="active">Three panels</button>
+        <button type="button" data-value="duo">Two panels</button>
+        <button type="button" data-value="solo">One photo</button>
+        <button type="button" data-value="quad">Four panels</button>
+      </div>
+      <p class="group-label">Colour grade</p>
+      <div class="options" id="grade-options">
+        <button type="button" data-value="sunset" class="active">Vice sunset</button>
+        <button type="button" data-value="neon">Neon nights</button>
+        <button type="button" data-value="noir">Noir</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Step 2 — Caption</legend>
+      <label>Title <input id="title" type="text" maxlength="48" value="Sunset Heist"></label>
+      <label>Subtitle <input id="subtitle" type="text" maxlength="48" value="Vice City Nights"></label>
+      <p class="group-label">Lettering</p>
+      <div class="options" id="style-options">
+        <button type="button" data-value="block" class="active">Block</button>
+        <button type="button" data-value="sunset">Sunset fill</button>
+        <button type="button" data-value="neon">Neon glow</button>
+      </div>
+      <label class="check"><input id="sun" type="checkbox" checked> Striped sunset sun</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Step 3 — Export</legend>
+      <label>Post size
+        <select id="size">
+          <option value="square" selected>1080 x 1080 — square post</option>
+          <option value="portrait">1080 x 1350 — portrait post</option>
+          <option value="wide">1920 x 1080 — wide post</option>
+        </select>
+      </label>
+      <button id="export" type="button">Export PNG</button>
+      <p id="status" role="status"></p>
+    </fieldset>
+    <p class="fineprint">The poster art, the sun and the lettering are all drawn by this app. No game logos, artwork or fonts are used.</p>
   </section>
-  <canvas id="cover" width="1080" height="1080" aria-label="The cover"></canvas>
+  <section class="preview" aria-label="Cover preview">
+    <canvas id="cover" width="1080" height="1080"></canvas>
+  </section>
 </main>
 <script type="module" src="./src/main.js"></script>
 </body>

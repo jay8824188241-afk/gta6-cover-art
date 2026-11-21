@@ -1,12 +1,39 @@
-html, body { margin: 0; height: 100%; background: #f2f0f4; color: #1d1b22; font: 15px/1.4 system-ui, sans-serif; }
-.app { display: flex; gap: 32px; align-items: center; justify-content: center; height: 100%; padding: 24px; box-sizing: border-box; }
-.controls { display: flex; flex-direction: column; gap: 14px; width: 280px; }
-.controls h1 { margin: 0; font-size: 28px; }
-.controls p { margin: 0; color: #5c5866; }
-label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
-input[type=text] { font: inherit; padding: 8px; border: 1px solid #c9c4d1; border-radius: 6px; }
-button { font: inherit; font-weight: 700; padding: 10px; border: 0; border-radius: 6px; background: #1d1b22; color: #fff; cursor: pointer; }
-canvas { width: min(70vh, 60vw); height: min(70vh, 60vw); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); }
+/* Neon Coast editor: dark controls on the left, live cover on the right. */
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: #150f1e; color: #f5f2fb; font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+
+.app { display: flex; gap: 30px; align-items: flex-start; justify-content: center; padding: 26px; }
+.controls { display: flex; flex-direction: column; gap: 16px; width: 330px; flex: none; }
+.controls header h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: 0.05em; text-transform: uppercase; background: linear-gradient(90deg, #ffe95e, #ff7a3d, #ff2e88); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tagline { margin: 0; color: #bcb3cf; }
+
+fieldset { margin: 0; padding: 14px 16px 16px; border: 1px solid #3c304f; border-radius: 12px; background: #1e1729; display: flex; flex-direction: column; gap: 10px; }
+legend { font-weight: 700; padding: 0 6px; color: #ffd9a0; }
+.group-label { margin: 6px 0 0; font-weight: 700; font-size: 13px; color: #d8cfee; }
+.slot-name { margin: 4px 0 0; font-weight: 700; color: #ffd9a0; }
+.photo-slot { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px dashed #3c304f; }
+.photo-slot:first-of-type { border-top: 0; padding-top: 0; }
+
+label { display: flex; flex-direction: column; gap: 5px; font-weight: 600; font-size: 13px; }
+label.check { flex-direction: row; align-items: center; gap: 8px; }
+input[type=text], select { font: inherit; padding: 8px 10px; border: 1px solid #4c3f63; border-radius: 6px; background: #251d33; color: #f5f2fb; }
+input[type=range] { accent-color: #ff2e88; width: 100%; }
+input[type=file] { font-weight: 400; }
+
+button { font: inherit; font-weight: 700; padding: 9px 12px; border: 1px solid #4c3f63; border-radius: 6px; background: #2b223a; color: #f5f2fb; cursor: pointer; }
+button:hover { border-color: #ff2e88; }
+button.active { background: #ff2e88; border-color: #ff2e88; color: #fff; }
+.options { display: flex; flex-wrap: wrap; gap: 8px; }
+#export { background: linear-gradient(90deg, #ff7a3d, #ff2e88); border: 0; font-size: 16px; padding: 12px; }
+#status { margin: 0; min-height: 1.2em; color: #8ef4ff; font-size: 13px; }
+.fineprint { margin: 0; font-size: 12px; color: #8f86a5; }
+
+.preview { position: sticky; top: 26px; display: flex; justify-content: center; }
+canvas { width: min(72vh, 58vw); height: auto; max-height: 92vh; border-radius: 4px; box-shadow: 0 12px 44px rgba(0, 0, 0, 0.6); }
+
+/* Cover-only shots: hide the editor and let the poster fill the frame. */
 body.shot-cover .controls { display: none; }
-body.shot-cover .app { padding: 0; }
-body.shot-cover canvas { width: 100vw; height: 100vh; box-shadow: none; }
+body.shot-cover .app { padding: 0; gap: 0; }
+body.shot-cover .preview { position: static; }
+body.shot-cover canvas { width: 100vw; height: 100vh; max-height: none; border-radius: 0; box-shadow: none; object-fit: contain; background: #160a24; }
